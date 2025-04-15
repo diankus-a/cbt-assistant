@@ -60,7 +60,7 @@ async def handle_text_input(message, text):
     await message.answer("🔎 Анализирую ваши мысли...")
     gpt_response = await ask_gpt(text)
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    await message.answer(f"📅 **Дата:** {now}
+    await message.answer(f"📅 **Дата:** {now}\\n\\n{gpt_response}", parse_mode="Markdown")
 
 {gpt_response}", parse_mode="Markdown")
 
