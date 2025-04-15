@@ -1,13 +1,11 @@
 import os
 import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import InputFile
-from aiogram.utils import executor
-from openai import OpenAI
-from dotenv import load_dotenv
 import datetime
-import aiohttp
 import tempfile
+import openai
+from dotenv import load_dotenv
+from aiogram import Bot, Dispatcher, types
+from aiogram.utils import executor
 
 load_dotenv()
 
@@ -18,30 +16,31 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher(bot)
 
-openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openai.api_key = OPENAI_API_KEY
 
 PROMPT_FILE = "prompt.md"
 with open(PROMPT_FILE, encoding="utf-8") as f:
     BASE_PROMPT = f.read()
 
 async def transcribe_voice(file_path):
-    audio_file = open(file_path, "rb")
-    transcript = openai_client.audio.transcriptions.create(
-        model="whisper-1", file=audio_file, response_format="text"
-    )
+    with open(file_path, "rb") as audio_file:
+        transcript = openai.Audio.transcribe(
+            model="whisper-1",
+            file=audio_file,
+            response_format="text"
+        )
     return transcript
 
 async def ask_gpt(user_input):
-    messages = [
-        {"role": "system", "content": BASE_PROMPT},
-        {"role": "user", "content": user_input}
-    ]
-    response = openai_client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
-        messages=messages,
+        messages=[
+            {"role": "system", "content": BASE_PROMPT},
+            {"role": "user", "content": user_input}
+        ],
         temperature=0.5
     )
-    return response.choices[0].message.content
+    return response["choices"][0]["message"]["content"]
 
 @dp.message_handler(content_types=types.ContentType.VOICE)
 async def handle_voice(message: types.Message):
