@@ -63,7 +63,5 @@ async def handle_text_input(message, text):
     message_text = f"📅 **Дата:** {now}\n\n{gpt_response}"
     await message.answer(message_text, parse_mode="Markdown")
 
-{gpt_response}", parse_mode="Markdown")
-
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)
