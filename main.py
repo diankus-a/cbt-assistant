@@ -33,7 +33,7 @@ async def transcribe_voice(file_path):
 
 async def ask_gpt(user_input):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": BASE_PROMPT},
             {"role": "user", "content": user_input}
