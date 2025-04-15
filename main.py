@@ -1,0 +1,68 @@
+import os
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import InputFile
+from aiogram.utils import executor
+from openai import OpenAI
+from dotenv import load_dotenv
+import datetime
+import aiohttp
+import tempfile
+
+load_dotenv()
+
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+logging.basicConfig(level=logging.INFO)
+bot = Bot(token=TELEGRAM_TOKEN)
+dp = Dispatcher(bot)
+
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+PROMPT_FILE = "prompt.md"
+with open(PROMPT_FILE, encoding="utf-8") as f:
+    BASE_PROMPT = f.read()
+
+async def transcribe_voice(file_path):
+    audio_file = open(file_path, "rb")
+    transcript = openai_client.audio.transcriptions.create(
+        model="whisper-1", file=audio_file, response_format="text"
+    )
+    return transcript
+
+async def ask_gpt(user_input):
+    messages = [
+        {"role": "system", "content": BASE_PROMPT},
+        {"role": "user", "content": user_input}
+    ]
+    response = openai_client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        temperature=0.5
+    )
+    return response.choices[0].message.content
+
+@dp.message_handler(content_types=types.ContentType.VOICE)
+async def handle_voice(message: types.Message):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as tmp:
+        file_path = tmp.name
+    file = await bot.get_file(message.voice.file_id)
+    await bot.download_file(file.file_path, file_path)
+    text = await transcribe_voice(file_path)
+    await handle_text_input(message, text)
+
+@dp.message_handler(content_types=types.ContentType.TEXT)
+async def handle_text(message: types.Message):
+    await handle_text_input(message, message.text)
+
+async def handle_text_input(message, text):
+    await message.answer("🔎 Анализирую ваши мысли...")
+    gpt_response = await ask_gpt(text)
+    now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    await message.answer(f"📅 **Дата:** {now}
+
+{gpt_response}", parse_mode="Markdown")
+
+if __name__ == "__main__":
+    executor.start_polling(dp, skip_updates=True)
